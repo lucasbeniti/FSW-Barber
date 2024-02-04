@@ -5,17 +5,23 @@ import Search from "./_components/search";
 import BookingItem from "../components/booking-item";
 import BarbershopItem from "./_components/barbershop-item";
 import { db } from "../lib/prisma";
-import Footer from "../components/footer";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../api/auth/[...nextauth]/route";
 
 export default async function Home() {
   const barbershops = await db.barbershop.findMany({});
+  const session = await getServerSession(authOptions);
 
   return (
     <div>
       <Header />
 
       <div className="p-5">
-        <h2 className="text-xl font-bold">Olá, Miguel!</h2>
+        <h2 className="text-xl font-bold">
+          {session?.user
+            ? `Olá, ${session.user.name?.split(" ")[0]}!`
+            : "Olá! Vamos agendar um corte hoje?"}
+        </h2>
         <p className="capitalize text-sm">
           {format(new Date(), "EEEE',' d 'de' MMMM", {
             locale: ptBR,
