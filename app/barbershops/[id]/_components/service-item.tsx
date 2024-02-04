@@ -13,12 +13,14 @@ import {
 } from "@/app/components/ui/sheet";
 import { Barbershop, Service } from "@prisma/client";
 import { ptBR } from "date-fns/locale";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import React, { useMemo } from "react";
 import { useState } from "react";
 import { generateDayTimeList } from "../_helpers/hours";
-import { format } from "date-fns";
+import { format, setHours, setMinutes } from "date-fns";
+import { saveBooking } from "../_actions/save-booking";
+import { Loader2 } from "lucide-react";
 
 interface ServiceItemProps {
   barbershop: Barbershop;
@@ -37,8 +39,10 @@ const ServiceItem = ({
     }
   };
 
+  const { data } = useSession();
   const [date, setDate] = useState<Date | undefined>(undefined);
   const [hour, setHour] = useState<String | undefined>();
+  const [submitIsLoading, setSubmitIsLoading] = useState(false);
 
   const handleDateClick = (date: Date | undefined) => {
     setDate(date);
@@ -49,9 +53,35 @@ const ServiceItem = ({
     setHour(time);
   };
 
+  const handleBookingSubmit = async () => {
+    setSubmitIsLoading(true);
+    try {
+      if (!hour || !date || !data?.user) {
+        return;
+      }
+
+      const dateHour = Number(hour?.split(":")[0]);
+      const dateMinutes = Number(hour?.split(":")[1]);
+
+      const newDate = setMinutes(setHours(date, dateHour), dateMinutes);
+
+      await saveBooking({
+        serviceId: service.id,
+        barbershopId: barbershop.id,
+        date: newDate,
+        userId: (data.user as any).id,
+      });
+    } catch (error) {
+      console.log({ error });
+    } finally {
+      setSubmitIsLoading(false);
+    }
+  };
+
   const timeList = useMemo(() => {
     return date ? generateDayTimeList(date) : [];
   }, [date]);
+
   return (
     <Card>
       <CardContent className="p-3">
@@ -90,37 +120,39 @@ const ServiceItem = ({
                     <SheetTitle>Fazer Reserva</SheetTitle>
                   </SheetHeader>
 
-                  <Calendar
-                    mode="single"
-                    selected={date}
-                    onSelect={handleDateClick}
-                    className="mt-4"
-                    locale={ptBR}
-                    fromDate={new Date()}
-                    styles={{
-                      head_cell: {
-                        width: "100%",
-                        textTransform: "capitalize",
-                      },
-                      cell: {
-                        width: "100%",
-                      },
-                      button: {
-                        width: "100%",
-                      },
-                      nav_button_previous: {
-                        width: "32px",
-                        height: "32px",
-                      },
-                      nav_button_next: {
-                        width: "32px",
-                        height: "32px",
-                      },
-                      caption: {
-                        textTransform: "capitalize",
-                      },
-                    }}
-                  />
+                  <div className="py-6">
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={handleDateClick}
+                      className="mt-4"
+                      locale={ptBR}
+                      fromDate={new Date()}
+                      styles={{
+                        head_cell: {
+                          width: "100%",
+                          textTransform: "capitalize",
+                        },
+                        cell: {
+                          width: "100%",
+                        },
+                        button: {
+                          width: "100%",
+                        },
+                        nav_button_previous: {
+                          width: "32px",
+                          height: "32px",
+                        },
+                        nav_button_next: {
+                          width: "32px",
+                          height: "32px",
+                        },
+                        caption: {
+                          textTransform: "capitalize",
+                        },
+                      }}
+                    />
+                  </div>
 
                   {date && (
                     <div
@@ -177,7 +209,15 @@ const ServiceItem = ({
                   </div>
                   <SheetFooter>
                     <div className="p-5 flex flex-col">
-                      <Button disabled={!hour || !date}>Confirmar</Button>
+                      <Button
+                        disabled={!hour || !date || submitIsLoading}
+                        onClick={handleBookingSubmit}
+                      >
+                        {submitIsLoading && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Confirmar
+                      </Button>
                     </div>
                   </SheetFooter>
                 </SheetContent>
