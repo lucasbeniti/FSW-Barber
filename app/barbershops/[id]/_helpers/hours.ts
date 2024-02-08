@@ -2,7 +2,7 @@ import { addMinutes, setHours, setMinutes, format } from "date-fns";
 
 export function generateDayTimeList(date: Date): string[] {
   const startTime =
-    new Date().getHours() >= 9
+    new Date().getHours() > 7 && date.getDate() === new Date().getDate()
       ? setMinutes(setHours(date, new Date().getHours() + 1), 0)
       : setMinutes(setHours(date, 9), 0);
 
